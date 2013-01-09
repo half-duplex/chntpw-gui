@@ -1,9 +1,21 @@
-/*
-   main.cpp
-   chntpw-gui
-   By Trevor Bergeron (mallegonian@gmail.com) and Sean Buckley
-   This program is copyright 2013, and is licensed under the terms of the GNU General Public License.
- */
+/**
+  src/main.cpp
+  This file is part of chntpw-gui, a graphical frontend to chntpw.
+  Copyright (C) 2013 Trevor Bergeron
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+**/
 
 #include "main.h"
 #include <gtkmm/application.h>
@@ -226,3 +238,4 @@ void t_chntpw::on_drive_change(){
     std::cout<<"done.\n";
 }
 
+/* vim: set ts=4 sw=4 tw=0 et :*/

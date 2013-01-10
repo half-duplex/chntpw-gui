@@ -29,6 +29,43 @@ int main(int argc,char *argv[]){
     return ret;
 }
 
+// from http://dzone.com/snippets/simple-popen2-implementation
+#define READ 0
+#define WRITE 1
+pid_t popen2(const char *command, int *infp, int *outfp){
+    int p_stdin[2], p_stdout[2];
+    pid_t pid;
+    if (pipe(p_stdin) != 0 || pipe(p_stdout) != 0) return -1;
+    pid = fork();
+    if (pid < 0)
+        return pid;
+    else
+        if (pid == 0) {
+            close(p_stdin[WRITE]);
+            dup2(p_stdin[READ], READ);
+            close(p_stdout[READ]);
+            dup2(p_stdout[WRITE], WRITE); 
+            execl("/bin/sh", "sh", "-c", command, NULL);
+            perror("execl");
+            exit(1);
+        }
+
+    if (infp == NULL)
+        close(p_stdin[WRITE]);
+    else
+        *infp = p_stdin[WRITE];
+    // The way it was p_stdin[read] in this program is still open
+    if (outfp == NULL)
+        close(p_stdout[READ]);
+    else
+        *outfp = p_stdout[READ];
+    // as well as p_stdout[write], they're closed in the fork, but not in the original program
+    //fix is ez:
+    close(p_stdin[READ]); // We only write to the forks input anyway
+    close(p_stdout[WRITE]); // and we only read from its output
+    return pid;
+}
+
 t_chntpw::t_chntpw()
     :
         m_box_everything(Gtk::ORIENTATION_VERTICAL, 5),
@@ -104,7 +141,7 @@ t_chntpw::t_chntpw()
         }
     }
     std::cout<<"done.\n";
-    
+
     m_cmb_drive.pack_start(m_cols_dev.m_col_dev);
     m_cmb_drive.pack_start(m_cols_dev.m_col_name);
     m_cmb_drive.signal_changed().connect(sigc::mem_fun(*this, &t_chntpw::on_drive_change));
@@ -133,7 +170,6 @@ t_chntpw::~t_chntpw(){
 }
 
 void t_chntpw::go(){
-    std::cout<<"Go!\n";
     Gtk::TreeModel::iterator iter = m_cmb_drive.get_active();
     if(!iter)return;
     Gtk::TreeModel::Row row = *iter;
@@ -159,23 +195,30 @@ void t_chntpw::go(){
 
     Glib::ustring s_chntpw_cmd = "chntpw.static ";
     s_chntpw_cmd.append(target_mount);
-    s_chntpw_cmd.append("/Windows/System32/config/SAM -u ");
+    s_chntpw_cmd.append("/Windows/System32/config/SAM ");
+    s_chntpw_cmd.append(target_mount);
+    s_chntpw_cmd.append("/Windows/System32/config/SYSTEM -u ");
     s_chntpw_cmd.append(row_user[m_cols_user.m_col_dev]);
     try{
         std::cout<<"done.\nChanging password...\t\t";
-        FILE *f_chntpw = popen(s_chntpw_cmd.c_str(), "r");
-        if(!f_chntpw)throw -1;
-        Glib::ustring f_chntpw_interactive = "2\n";
-        f_chntpw_interactive.append(row[m_cols_dev.m_col_dev]);
-        f_chntpw_interactive.append("\nn\n");
-        fputs(f_chntpw_interactive.c_str(), f_chntpw);
-        char buffer[1024];
-        while(!feof(f_chntpw)){
-            fgets(buffer, 1024, f_chntpw);
-            std::cout<<buffer;
+        int infp, outfp;
+        char buffer[256] = "";
+
+        if (popen2(/*s_chntpw_cmd.c_str()*/"nc 127.0.0.1 12345", &infp, &outfp) <=0){
+            std::cout<<"Couldn't exec chntpw.static! Make sure it's in your path.";
+            return;
         }
 
-        pclose(f_chntpw);
+        std::cout<<"Buffer time\n";
+        while(read(outfp, buffer, 256)){
+            std::cout<<"b: "<<buffer;
+            if(strcmp(buffer, "Do you really wish to disable SYSKEY? (y/n) [n] ")==0)
+                write(infp, "n\n", 2);
+            //else if(0)
+        }
+
+
+
     }catch(int e){}
 
     std::cout<<"done.\nUnmounting device...\t\t";

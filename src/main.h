@@ -29,6 +29,8 @@
 #include <gtkmm/liststore.h>
 #include <gtkmm/comboboxtext.h>
 
+pid_t popen2(const char *command, int *infp, int *outfp);
+
 class t_chntpw : public Gtk::Window {
     public:
         t_chntpw();
